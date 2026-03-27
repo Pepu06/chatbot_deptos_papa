@@ -196,8 +196,12 @@ async def process_message(wa_message: WhatsAppMessage):
         logger.info(f"🔍 calendar_sticky_turns[{wa_message.wa_id}]: {calendar_sticky_turns.get(wa_message.wa_id, 0)}")
         
         # 5. Format message with history
+        current_message = wa_message.text or "[Imagen]"
+        if image_url:
+            current_message = f"{current_message}\nURL de imagen subida: {image_url}"
+
         user_message_with_history = create_user_message_with_history(
-            current_message=wa_message.text or "[Imagen]",
+            current_message=current_message,
             history=history[:-1]  # Exclude the message we just added
         )
         
@@ -207,16 +211,26 @@ async def process_message(wa_message: WhatsAppMessage):
             response = await calendar_agent.handle_message(user_message_with_history)
         else:
             logger.info("🏢 Using Property Agent")
-            # Check if has image
-            if wa_message.image_id and image_url:
-                # Download image for Gemini
+            # Check if has image: enviar bytes a Gemini aunque falle la subida a Supabase.
+            if wa_message.image_id:
                 image_data = await whatsapp_service.download_media(wa_message.image_id)
-                response = await property_agent.handle_message(
-                    user_message_with_history,
-                    image_data=image_data
-                )
+                if image_data:
+                    logger.info("🖼️ Image bytes downloaded for Gemini")
+                else:
+                    logger.warning("⚠️ Could not download image bytes for Gemini")
+
+                # Procesar con imagen si se pudo descargar; si no, continuar en texto.
+                if image_data:
+                    response = await property_agent.handle_message(
+                        user_message_with_history,
+                        image_data=image_data
+                    )
+                else:
+                    response = await property_agent.handle_message(user_message_with_history)
             else:
-                response = await property_agent.handle_message(user_message_with_history)
+                response = await property_agent.handle_message(
+                    user_message_with_history
+                )
         
         # 7. Add assistant response to history
         await supabase_service.add_history(

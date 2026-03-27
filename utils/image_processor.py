@@ -12,7 +12,7 @@ from datetime import datetime
 async def process_whatsapp_image(
     media_id: str,
     user_id: str,
-    bucket_name: str = "whatsapp-images"
+    bucket_name: str = "fotos_departamentos"
 ) -> Optional[str]:
     """
     Download image from WhatsApp and upload to Supabase storage
