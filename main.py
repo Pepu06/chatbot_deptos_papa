@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.settings import settings
 from routes.webhook import router as webhook_router
+from fastapi.routing import APIRoute
 
 app = FastAPI(
     title="WhatsApp Bot API",
@@ -13,6 +14,8 @@ app = FastAPI(
     version="1.0.0",
     debug=settings.DEBUG
 )
+
+app.router.redirect_slashes = False 
 
 # CORS middleware
 app.add_middleware(
