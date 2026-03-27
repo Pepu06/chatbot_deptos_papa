@@ -26,17 +26,17 @@ class CalendarService:
         self._authenticate()
     
     def _authenticate(self):
-        """Authenticate with Google Calendar API"""
         try:
-        credentials_info = json.loads(settings.GOOGLE_CREDENTIALS)  # Variable de entorno con el JSON
-        self.credentials = service_account.Credentials.from_service_account_info(
-            credentials_info,
-            scopes=SCOPES
-        )
-        self.service = build('calendar', 'v3', credentials=self.credentials)
-        print("✅ Google Calendar autenticado con Service Account")
-    except Exception as e:
-        print(f"❌ Error autenticando: {e}")
+            credentials_info = json.loads(settings.GOOGLE_CREDENTIALS)
+            self.credentials = service_account.Credentials.from_service_account_info(
+                credentials_info,
+                scopes=SCOPES
+            )
+            self.service = build('calendar', 'v3', credentials=self.credentials)
+            print("✅ Google Calendar autenticado con Service Account")
+        except Exception as e:
+            print(f"❌ Error autenticando con Google Calendar: {e}")
+            print("Calendar functionality will be limited.")
     
     async def create_event(
         self,
