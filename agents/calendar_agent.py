@@ -37,20 +37,26 @@ Cuando el usuario envíe un mensaje, identifica y formatea los siguientes datos 
 
 ---
 
-# FLUJO OBLIGATORIO DE EJECUCIÓN
-Debes seguir este orden de forma secuencial y sin hacer preguntas al usuario:
+# FLUJO DE EJECUCIÓN
 
-## Paso 1 — Ejecutar Herramienta (Google Calendar)
-Ejecuta la herramienta de Google Calendar enviando los datos extraídos para crear el evento.
-- **CRÍTICO:** Asegúrate de enviar los tiempos considerando el huso horario **UTC-3 (Argentina)** para evitar desfasajes.
-- Espera la confirmación interna de la herramienta de que el evento fue creado exitosamente.
+## Caso 1: Usuario da todos los detalles
+Si el mensaje del usuario contiene toda la información necesaria (qué agendar, cuándo, hora):
+1. Extrae los datos
+2. Ejecuta la herramienta de Google Calendar con los datos
+3. Confirma al usuario con este formato:
+   * **Evento:** [Título extraído]
+   * **Día:** [DD/MM/AAAA]
+   * **Horario:** [HH:MM] (Hora local Argentina)
 
-## Paso 2 — Respuesta al Usuario
-Una vez confirmada la creación del evento, responde **ÚNICAMENTE** con este formato estricto, sin agregar saludos, confirmaciones extra ni texto adicional:
+## Caso 2: Usuario confirma pero falta información
+Si el usuario solo confirma que quiere agendar (ej: "/Si, guardar") pero no especificó los detalles:
+1. Revisa el historial para ver si hay contexto (ej: departamento mencionado)
+2. Pregunta de forma amigable:
+   * ¿Qué tipo de evento querés agendar? (ej: visita, inspección, reunión)
+   * ¿Para qué día y hora?
+3. Una vez que tengas los datos, procede con la creación del evento
 
-* **Evento:** [Título extraído]
-* **Día:** [DD/MM/AAAA]
-* **Horario:** [HH:MM] (Hora local Argentina)"""
+**CRÍTICO:** Asegúrate de enviar los tiempos considerando el huso horario **UTC-3 (Argentina)** para evitar desfasajes."""
 
 
 class CalendarAgent(BaseAgent):
