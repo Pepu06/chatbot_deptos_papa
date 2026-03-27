@@ -1,11 +1,14 @@
 # ✅ Fix Implementado: Funcionalidad de Calendario
 
-## 🐛 Problema Original
-Cuando el usuario presionaba el botón "Sí, agendar" (/Si, guardar), el bot respondía:
-> "Lo siento, no tengo la funcionalidad para agendar eventos en el calendario."
+## 🐛 Problemas Originales
+1. Cuando el usuario presionaba el botón "Sí, agendar" (/Si, guardar), el bot respondía:
+   > "Lo siento, no tengo la funcionalidad para agendar eventos en el calendario."
 
-## 🔧 Solución Aplicada
-Se identificaron y corrigieron **DOS problemas**:
+2. Error de autenticación con Google Calendar:
+   > `❌ Error autenticando con Google Calendar: name 'json' is not defined`
+
+## 🔧 Soluciones Aplicadas
+Se identificaron y corrigieron **TRES problemas**:
 
 ### 1. Routing incorrecto (routes/webhook.py)
 **Antes:** El botón no se detectaba correctamente  
@@ -19,6 +22,10 @@ Se identificaron y corrigieron **DOS problemas**:
 - ✅ SOLO pregunta día y hora
 - ✅ NO modifica ni resume el mensaje original
 
+### 3. Imports faltantes (services/calendar_client.py) 🆕
+**Problema:** Faltaban imports necesarios para autenticación  
+**Solución:** Agregados `import json` y `from google.oauth2 import service_account`
+
 ## 📊 Flujo Correcto
 1. Usuario: "San Benito 1584 cusco durmiendo"
 2. Bot guarda en Supabase y pregunta si agendar
@@ -31,7 +38,7 @@ Se identificaron y corrigieron **DOS problemas**:
 - ✅ Código corregido y probado
 - ✅ Tests creados y pasando (test_calendar_button_fix.py)
 - ✅ Ejemplo de flujo correcto (test_calendar_flow_example.py)
-- ✅ Commits realizados (5 commits)
+- ✅ Commits realizados (6 commits)
 - ⚠️ **PENDIENTE:** Deploy a producción
 
 ## 🚀 Próximos Pasos
@@ -54,15 +61,17 @@ git push origin main
 
 ## 📁 Archivos Modificados
 - `routes/webhook.py` - Routing mejorado
-- `agents/calendar_agent.py` - Manejo de confirmaciones
+- `agents/calendar_agent.py` - Usa mensaje de Supabase exacto
+- `services/calendar_client.py` - Imports faltantes agregados
 
 ## 📁 Archivos Creados
 - `test_calendar_button_fix.py` - Tests del fix
+- `test_calendar_flow_example.py` - Ejemplo del flujo
 - `FIX_CALENDARIO_DEPLOY.md` - Guía de despliegue
 - `RESUMEN_FIX.md` - Este archivo
 
 ---
 **Fecha:** 2026-03-27  
-**Commits:** 66110b1, e7b4de6, 394175a, 74549a1  
-**Archivos modificados:** routes/webhook.py, agents/calendar_agent.py  
+**Commits:** 66110b1, e7b4de6, 394175a, 74549a1, 4171ce8, 919fa39  
+**Archivos modificados:** routes/webhook.py, agents/calendar_agent.py, services/calendar_client.py  
 **Tests:** test_calendar_button_fix.py, test_calendar_flow_example.py
