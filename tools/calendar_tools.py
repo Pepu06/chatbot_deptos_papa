@@ -56,9 +56,15 @@ def crear_evento_calendar(
     ubicacion: str = None
 ) -> Dict[str, Any]:
     """Create a calendar event"""
+    print(f"🔧 crear_evento_calendar llamada:")
+    print(f"   Título: {titulo}")
+    print(f"   Inicio: {fecha_hora_inicio}")
+    print(f"   Fin: {fecha_hora_fin}")
+    
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
+            print("   ⚙️ Loop running - usando ThreadPoolExecutor")
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(
@@ -73,6 +79,7 @@ def crear_evento_calendar(
                 )
                 event = future.result()
         else:
+            print("   ⚙️ Loop not running - usando run_until_complete")
             event = loop.run_until_complete(
                 calendar_service.create_event(
                     title=titulo,
@@ -84,6 +91,7 @@ def crear_evento_calendar(
             )
         
         if event:
+            print(f"   ✅ Evento creado: {event.get('id')}")
             return {
                 "creado": True,
                 "evento": {
@@ -96,11 +104,15 @@ def crear_evento_calendar(
                 "mensaje": "Evento creado exitosamente en Google Calendar"
             }
         else:
+            print("   ❌ Event es None")
             return {
                 "creado": False,
                 "error": "No se pudo crear el evento en el calendario"
             }
     except Exception as e:
+        print(f"   ❌ Excepción: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "creado": False,
             "error": str(e)

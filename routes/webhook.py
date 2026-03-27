@@ -10,9 +10,14 @@ from agents import property_agent, calendar_agent
 from utils import create_user_message_with_history, process_whatsapp_image
 from config.settings import settings
 import logging
+from typing import Dict
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Mantiene enrutamiento temporal por usuario para que, después del botón de
+# confirmación ("si, guardar"), el siguiente mensaje también vaya a CalendarAgent.
+calendar_sticky_turns: Dict[str, int] = {}
 
 
 @router.get("/", response_class=PlainTextResponse)
@@ -166,12 +171,29 @@ async def process_message(wa_message: WhatsAppMessage):
         )
         
         is_calendar_request = is_calendar_confirmation or any(keyword in message_lower for keyword in calendar_keywords)
+
+        # Sticky routing: si el usuario tiene 1 turno pendiente para CalendarAgent,
+        # forzamos este mensaje a calendario y consumimos el turno.
+        sticky_turns = calendar_sticky_turns.get(wa_message.wa_id, 0)
+        if sticky_turns > 0:
+            is_calendar_request = True
+            sticky_turns -= 1
+            if sticky_turns > 0:
+                calendar_sticky_turns[wa_message.wa_id] = sticky_turns
+            else:
+                calendar_sticky_turns.pop(wa_message.wa_id, None)
+
+        # Si este mensaje es la respuesta del botón ("si, guardar"),
+        # dejamos 1 turno extra para que el próximo mensaje también vaya a calendar.
+        if is_calendar_confirmation:
+            calendar_sticky_turns[wa_message.wa_id] = 1
         
         # DEBUG: Log routing decision
         logger.info(f"🔍 Message: '{wa_message.text}'")
         logger.info(f"🔍 Message lower: '{message_lower}'")
         logger.info(f"🔍 is_calendar_confirmation: {is_calendar_confirmation}")
         logger.info(f"🔍 is_calendar_request: {is_calendar_request}")
+        logger.info(f"🔍 calendar_sticky_turns[{wa_message.wa_id}]: {calendar_sticky_turns.get(wa_message.wa_id, 0)}")
         
         # 5. Format message with history
         user_message_with_history = create_user_message_with_history(
