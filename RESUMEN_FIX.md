@@ -11,14 +11,27 @@ Se identificaron y corrigieron **DOS problemas**:
 **Antes:** El botón no se detectaba correctamente  
 **Después:** Detección robusta que soporta variantes del texto
 
-### 2. Agent no manejaba confirmaciones (agents/calendar_agent.py)
+### 2. Calendar Agent mejorado (agents/calendar_agent.py)
 **Antes:** Solo funcionaba si el usuario daba todos los detalles de una vez  
-**Después:** Maneja confirmaciones y pregunta por detalles faltantes
+**Después:** 
+- ✅ Usa EXACTAMENTE el mensaje guardado en Supabase como título del evento
+- ✅ NO pregunta "qué agendar" - ya lo sabe del historial
+- ✅ SOLO pregunta día y hora
+- ✅ NO modifica ni resume el mensaje original
+
+## 📊 Flujo Correcto
+1. Usuario: "San Benito 1584 cusco durmiendo"
+2. Bot guarda en Supabase y pregunta si agendar
+3. Usuario: presiona botón "Sí, agendar"
+4. Bot: "¿Para qué día y hora querés agendar 'San Benito 1584 cusco durmiendo'?"
+5. Usuario: "mañana 3pm"
+6. **Evento creado:** "San Benito 1584 cusco durmiendo" ⬅️ exactamente igual al mensaje guardado
 
 ## 📊 Estado
 - ✅ Código corregido y probado
 - ✅ Tests creados y pasando (test_calendar_button_fix.py)
-- ✅ Commits realizados (3 commits)
+- ✅ Ejemplo de flujo correcto (test_calendar_flow_example.py)
+- ✅ Commits realizados (5 commits)
 - ⚠️ **PENDIENTE:** Deploy a producción
 
 ## 🚀 Próximos Pasos
@@ -35,8 +48,9 @@ git push origin main
 ### Para verificar:
 1. Envía: "San Benito 1584 cusco durmiendo"
 2. Presiona el botón "Sí, agendar"
-3. **Esperado:** Bot pregunta qué evento y cuándo
-4. **Antes (bug):** Bot decía que no tenía esa funcionalidad
+3. **Esperado:** Bot pregunta "¿Para qué día y hora querés agendar 'San Benito 1584 cusco durmiendo'?"
+4. Responde: "mañana 3pm"
+5. **Resultado:** Evento creado con título exacto: "San Benito 1584 cusco durmiendo"
 
 ## 📁 Archivos Modificados
 - `routes/webhook.py` - Routing mejorado
@@ -49,4 +63,6 @@ git push origin main
 
 ---
 **Fecha:** 2026-03-27  
-**Commits:** 66110b1, e7b4de6, 394175a
+**Commits:** 66110b1, e7b4de6, 394175a, 74549a1  
+**Archivos modificados:** routes/webhook.py, agents/calendar_agent.py  
+**Tests:** test_calendar_button_fix.py, test_calendar_flow_example.py
