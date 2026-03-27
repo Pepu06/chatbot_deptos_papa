@@ -3,6 +3,7 @@ Google Calendar client
 Handles calendar event creation
 """
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
@@ -11,6 +12,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 import os.path
 import pickle
+import json
 
 
 # If modifying these scopes, delete the file token.pickle
