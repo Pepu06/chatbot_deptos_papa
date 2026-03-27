@@ -41,6 +41,7 @@ async def webhook(request: Request):
     try:
         body = await request.json()
         webhook_data = WhatsAppWebhook(**body)
+        logger.info(f"📩 POST recibido: {body}")  # <-- agregá esto
         
         # Process each entry and change
         for entry in webhook_data.entry:
