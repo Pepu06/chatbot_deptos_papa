@@ -28,36 +28,15 @@ class CalendarService:
     def _authenticate(self):
         """Authenticate with Google Calendar API"""
         try:
-            # Token file stores the user's access and refresh tokens
-            token_file = settings.google_calendar_token_file
-            
-            if os.path.exists(token_file):
-                with open(token_file, 'rb') as token:
-                    self.credentials = pickle.load(token)
-            
-            # If there are no (valid) credentials available, let the user log in
-            if not self.credentials or not self.credentials.valid:
-                if self.credentials and self.credentials.expired and self.credentials.refresh_token:
-                    self.credentials.refresh(Request())
-                else:
-                    print("⚠️  Google Calendar requires manual authentication.")
-                    print("Run the authentication flow separately or credentials are missing.")
-                    # For production, you'd need a proper OAuth flow
-                    # For now, we'll create credentials from client config
-                    return
-                
-                # Save the credentials for the next run
-                with open(token_file, 'wb') as token:
-                    pickle.dump(self.credentials, token)
-            
-            # Build the service
-            if self.credentials:
-                self.service = build('calendar', 'v3', credentials=self.credentials)
-                print("✅ Google Calendar authenticated successfully")
-        
-        except Exception as e:
-            print(f"❌ Error authenticating with Google Calendar: {e}")
-            print("Calendar functionality will be limited.")
+        credentials_info = json.loads(settings.GOOGLE_CREDENTIALS)  # Variable de entorno con el JSON
+        self.credentials = service_account.Credentials.from_service_account_info(
+            credentials_info,
+            scopes=SCOPES
+        )
+        self.service = build('calendar', 'v3', credentials=self.credentials)
+        print("✅ Google Calendar autenticado con Service Account")
+    except Exception as e:
+        print(f"❌ Error autenticando: {e}")
     
     async def create_event(
         self,
