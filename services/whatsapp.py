@@ -24,7 +24,7 @@ class WhatsAppService:
         """Send a text message"""
         try:
             # TESTING: Siempre enviar al número de prueba
-            test_number = "+541140962011"  # Número de prueba sin el +
+            test_number = "+541154773088"  # Número de prueba sin el +
             
             url = f"{self.base_url}/{self.phone_number_id}/messages"
             payload = {
