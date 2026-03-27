@@ -33,11 +33,14 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.0-flash-exp"
     
     # Google Calendar
-    google_calendar_client_id: str
-    google_calendar_client_secret: str
+    google_credentials: str  # Service Account credentials JSON
+    google_calendar_id: str = "primary"
+    
+    # Legacy OAuth fields (deprecated, usar google_credentials)
+    google_calendar_client_id: Optional[str] = None
+    google_calendar_client_secret: Optional[str] = None
     google_calendar_redirect_uri: str = "http://localhost:8000/auth/callback"
     google_calendar_token_file: str = "token.json"
-    google_calendar_id: str = "primary"
     
     # Application
     timezone: str = "America/Argentina/Buenos_Aires"
@@ -63,6 +66,11 @@ class Settings(BaseSettings):
     def GEMINI_MODEL(self):
         """Alias for gemini_model"""
         return self.gemini_model
+    
+    @property
+    def GOOGLE_CREDENTIALS(self):
+        """Alias for google_credentials"""
+        return self.google_credentials
 
 
 # Global settings instance
