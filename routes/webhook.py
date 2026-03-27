@@ -91,7 +91,10 @@ def extract_whatsapp_message(
         if message_data.interactive.type == "button_reply" and message_data.interactive.button_reply:
             # Use the button text as the message text
             text = message_data.interactive.button_reply.text or message_data.interactive.button_reply.payload
-            logger.info(f"📱 Interactive button reply received: {text}")
+            logger.info(f"📱 Interactive button reply received:")
+            logger.info(f"   Text: '{text}'")
+            logger.info(f"   Payload: '{message_data.interactive.button_reply.payload}'")
+            logger.info(f"   Full button_reply: {message_data.interactive.button_reply}")
     
     return WhatsAppMessage(
         wa_id=message_data.from_,
@@ -153,12 +156,22 @@ async def process_message(wa_message: WhatsAppMessage):
         # 4. Determine which agent to use
         # Check if message is about calendar/scheduling
         calendar_keywords = ["agendar", "calendario", "recordatorio", "evento", "cita", "reunión"]
-        message_lower = (wa_message.text or "").lower()
+        message_lower = (wa_message.text or "").lower().strip()
         
         # Check if it's a button response from template (confirmation to schedule)
-        is_calendar_confirmation = "/si" in message_lower and "guardar" in message_lower
+        # Support multiple formats: "/si, guardar", "si, guardar", "/sí, guardar", etc.
+        is_calendar_confirmation = (
+            ("/si" in message_lower or "/sí" in message_lower or message_lower.startswith("si")) and 
+            "guardar" in message_lower
+        )
         
         is_calendar_request = is_calendar_confirmation or any(keyword in message_lower for keyword in calendar_keywords)
+        
+        # DEBUG: Log routing decision
+        logger.info(f"🔍 Message: '{wa_message.text}'")
+        logger.info(f"🔍 Message lower: '{message_lower}'")
+        logger.info(f"🔍 is_calendar_confirmation: {is_calendar_confirmation}")
+        logger.info(f"🔍 is_calendar_request: {is_calendar_request}")
         
         # 5. Format message with history
         user_message_with_history = create_user_message_with_history(
