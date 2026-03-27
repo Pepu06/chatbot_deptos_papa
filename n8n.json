@@ -1,0 +1,2581 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        976
+      ],
+      "id": "740c6c3e-df23-454c-ab03-23d30ee91603",
+      "name": "WhatsApp Trigger",
+      "webhookId": "db9538ca-f4fd-4cc9-aa13-68df31ffa591",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "XjoHC8wTcci1JBSr",
+          "name": "Chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "users",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        960
+      ],
+      "id": "fe92c447-7a4c-461d-9b84-f3a0c67c1c93",
+      "name": "Get user",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7aaad817-e1a6-4492-a63a-212234e9a849",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -288,
+        960
+      ],
+      "id": "1f5abd49-8e9d-4456-bc17-5da755b57471",
+      "name": "User exists?"
+    },
+    {
+      "parameters": {
+        "tableId": "users",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            },
+            {
+              "fieldId": "display_name",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].profile.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        1184
+      ],
+      "id": "40573a83-7f3c-4078-b9a8-74dd86213da9",
+      "name": "Create user",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "Hola, como te va?",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        1184
+      ],
+      "id": "36c8b78f-7986-402c-9e37-04aa0b1eeea1",
+      "name": "Welcome message",
+      "webhookId": "1ea2d730-0e93-4694-8982-afb03c8a41a3",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Get user').item.json.id  || $('Create user').item.json.id}}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].text.body }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        944
+      ],
+      "id": "7f39ab3c-ad8f-4fc4-a754-ef7a77d3b8d5",
+      "name": "Add history",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "id",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        400,
+        944
+      ],
+      "id": "705f66b5-491c-4b10-b7fe-d9a74db94d15",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "role,content,url_imagen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        944
+      ],
+      "id": "8fdd93e3-f6ef-4748-9377-d39c03165c05",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "getAll",
+        "tableId": "history",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "created_at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({hours: 24}).toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        192,
+        944
+      ],
+      "id": "e159ad0d-b908-4c8c-9ebd-07199cf628f9",
+      "name": "Get history",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Este es el historial de mensajes de los ultimos 5 minutos, esta ordenado de arriba lo mas viejo, abajo lo mas nuevo: \n{{ $('Edit Fields').item.json.Historial }}",
+        "options": {
+          "systemMessage": "=# SYSTEM PROMPT: AGENTE DE GESTIÓN INMOBILIARIA (WHATSAPP)\n\n**Rol:** Actuá como un asistente logístico inteligente especializado en la gestión de departamentos y notas de estado. Tu objetivo es procesar mensajes de texto para identificar departamentos y registrar información relevante en la base de datos.\n\n## 🛠 FLUJO DE TRABAJO OBLIGATORIO\n\n1. **ANÁLISIS DE MENSAJE:**\n   - Identificá el **departamento** (dirección completa o parcial, ej: \"San Benito de Palermo 1584\").\n   - Identificá la **nota** o contenido del mensaje (ej: \"esta cusco durmiendo\").\n\n2. **VERIFICACIÓN (Tool: `buscar_departamento`):**\n   - Ejecutá la búsqueda con el nombre del depto detectado.\n   - **ESCENARIO A (Existe):** Obtené el nombre/ID y procedé al guardado.\n   - **ESCENARIO B (No existe):** Informá al usuario de forma natural que el depto no está registrado y preguntale explícitamente: \"¿Querés que lo cree?\".\n\n3. **CREACIÓN (Tool: `crear_departamento`):**\n   - Si el usuario confirma (responde \"sí\", \"dale\", \"crealo\"), ejecutá esta herramienta para dar de alta la unidad.\n\n4. **REGISTRO FINAL (Tool: `guardar_mensaje`):**\n   - Una vez que el departamento está confirmado o creado, vinculá la nota al depto y guardalo en Supabase.\n\n## 📝 REGLAS DE INTERACCIÓN Y FORMATO\n\n- **Tono:** Profesional, directo y adaptado a WhatsApp.\n- **Formato de Confirmación:** Una vez guardado con éxito, respondé **exactamente** con esta estructura de emojis:\n\n✅ **Información guardada exitosamente**\n📍 **Depto:** [Nombre o Dirección del Departamento]\n💬 **Nota:** [Contenido del mensaje]\n\n- **Ambigüedad:** Si el mensaje es confuso y no podés distinguir la dirección de la nota, pedí una aclaración antes de ejecutar cualquier herramienta.\n\n## 🧰 HERRAMIENTAS DISPONIBLES\n- `buscar_departamento`: Busca coincidencias en la base de datos.\n- `crear_departamento`: Registra una nueva dirección.\n- `guardar_mensaje`: Inserta la nota final en la tabla de Supabase vinculada al departamento."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2496,
+        1264
+      ],
+      "id": "2cb0b4a1-2f7f-4e23-988e-44967f5ecaa0",
+      "name": "AI Agent1",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2496,
+        1456
+      ],
+      "id": "d0964ad3-3987-47f1-b2aa-c53c4e4b4104",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "A2ysi5u7Ic9B1BTv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "users",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        1488
+      ],
+      "id": "746a2483-4749-4d57-a13d-d398a0847af8",
+      "name": "Get user2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7aaad817-e1a6-4492-a63a-212234e9a849",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        1488
+      ],
+      "id": "7a4aed88-2623-4efc-8321-f21120b8897f",
+      "name": "User exists?1"
+    },
+    {
+      "parameters": {
+        "tableId": "users",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            },
+            {
+              "fieldId": "display_name",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].profile.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        80,
+        1712
+      ],
+      "id": "26b82ccc-7308-4005-b887-8c570628cf88",
+      "name": "Create user1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "Hola, como te va?",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        1712
+      ],
+      "id": "90afb785-074c-4eaa-9cce-2bbe11706a4c",
+      "name": "Welcome message1",
+      "webhookId": "1ea2d730-0e93-4694-8982-afb03c8a41a3",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Get user2').item.json.id  || $('Create user1').item.json.id}}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].image.caption || \"Foto enviada\" }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            },
+            {
+              "fieldId": "url_imagen",
+              "fieldValue": "=https://sriacwkwimtpzasxundu.supabase.co/storage/v1/object/public/{{ $json.Key }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1472
+      ],
+      "id": "e3be1c23-8762-44db-b030-137de435cd7d",
+      "name": "Add history1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0e023a6e-3d96-4591-a394-c14d807824c7",
+              "leftValue": "={{ $json.messages[0].text.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "f5334790-b481-479a-8a5f-62975c0eb2ad",
+              "leftValue": "={{ $json.messages[0].button.payload }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -848,
+        976
+      ],
+      "id": "54160fe6-f31b-4fee-afdc-c076bcada5e1",
+      "name": "Texto o imagen?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cf22ccd7-70fa-4712-870d-6892d449dc3f",
+              "leftValue": "={{ $json.messages[0].type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -688,
+        1504
+      ],
+      "id": "52acdb22-d600-4d86-8866-ddd616757d54",
+      "name": "If imagen"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sriacwkwimtpzasxundu.supabase.co/storage/v1/object/fotos_departamentos/{{ $now.toFormat('yyyyMMdd_HHmmss') }}_{{ $('HTTP Request1').item.json.id }}.jpg",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWFjd2t3aW10cHphc3h1bmR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNjI0MDgsImV4cCI6MjA4NjkzODQwOH0.g7NEuY4MmNsjTb98_eTt9H5Nx2yPckN_TQMxtQYyUUk"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWFjd2t3aW10cHphc3h1bmR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNjI0MDgsImV4cCI6MjA4NjkzODQwOH0.g7NEuY4MmNsjTb98_eTt9H5Nx2yPckN_TQMxtQYyUUk"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "={{ $node['HTTP Request1'].binary.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        384,
+        1392
+      ],
+      "id": "0b843431-0fa2-4389-b8a4-cadc917c092c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].image.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        1408
+      ],
+      "id": "a5058c39-a326-449a-9387-9450087d31c5",
+      "name": "Download media",
+      "webhookId": "f6f795ed-f006-459d-a532-6101b1e8837d",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer EAAMsDqGqkFMBQjBlcE0KNfuBsjfq48aZB557Tm7dkv7obOhlh3fCUHpvuZBSQ6cgyMnd5XvN9s6zhVZBNbKtyOWmChRoJC6UY8arUusLyRXUU8IZB1OjGvxhoZAZAILkyBCPrhaiLIrOWShNqEGVE3NBhWJjGGp1ebsWoc2fhj93VJN6V6J4UzcfLR0N7xPAZDZD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -272,
+        1408
+      ],
+      "id": "11855757-b3d9-4dd3-aa64-d312ae1ba17a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Úsala para guardar una nota o mensaje sobre un departamento específico. Requiere el ID del departamento y el texto a guardar.",
+        "tableId": "mensajes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "departamento_id",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues0_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues1_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "url_imagen",
+              "fieldValue": "={{ $('Aggregate1').context.executed ? $('Aggregate1').item.json.data[0].url_imagen : null }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        1568
+      ],
+      "id": "512e2885-7d66-4469-8155-de2ecc11e8e0",
+      "name": "Guardar mensaje",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "departamentos",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "address",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues0_Field_Value', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        1504
+      ],
+      "id": "6498d04c-5565-4182-82e1-8693b9062465",
+      "name": "Crear depto",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "departamentos",
+        "limit": "=50",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "address",
+              "condition": "ilike",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions0_Field_Value', `Aca deberias buscar el departamento segun la direccion total o parcial que porpuso el usuario. Envuelve la direccion entre * por ejemplo: *san benito*.`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        1568
+      ],
+      "id": "9c3e5b76-4016-49bf-8ac8-b7f10d9aad28",
+      "name": "Get deptos",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages = $(\"Limit\").all().map(item => item.json);\n\n// now en Argentina (UTC-3)\nconst now = new Date();\nconst nowArgentina = new Date(now.getTime() - 3 * 60 * 60 * 1000);\nconst fiveMinutesAgo = new Date(nowArgentina.getTime() - 5 * 60 * 1000);\n\nconst recentMessages = messages.filter(msg => {\n  const msgDate = new Date(msg.created_at);\n  return msgDate >= fiveMinutesAgo && msgDate <= nowArgentina;\n});\n\nreturn recentMessages;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        944
+      ],
+      "id": "b1fa7222-4530-41f7-baf2-731ff55860af",
+      "name": "Filtra los ultimos 5 mins de mensajes"
+    },
+    {
+      "parameters": {
+        "maxItems": 20
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        608,
+        944
+      ],
+      "id": "234d2609-22dc-4c6e-ab2c-9f17f0db1db8",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "id",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        1472
+      ],
+      "id": "b86c9c73-db81-4ca0-8f97-4e447cdb4982",
+      "name": "Sort1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "role,content,url_imagen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        1472
+      ],
+      "id": "b4f3a0cc-fea0-4669-b562-5da1a645334b",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "getAll",
+        "tableId": "history",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "created_at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({hours: 24}).toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        816,
+        1472
+      ],
+      "id": "5b20844b-d309-4ca3-954f-98217290e1a3",
+      "name": "Get history1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages = $(\"Limit1\").all().map(item => item.json);\n\n// now en Argentina (UTC-3)\nconst now = new Date();\nconst nowArgentina = new Date(now.getTime() - 3 * 60 * 60 * 1000);\nconst fiveMinutesAgo = new Date(nowArgentina.getTime() - 5 * 60 * 1000);\n\nconst recentMessages = messages.filter(msg => {\n  const msgDate = new Date(msg.created_at);\n  return msgDate >= fiveMinutesAgo && msgDate <= nowArgentina;\n});\n\nreturn recentMessages;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        1472
+      ],
+      "id": "c45849a5-6ea2-44ef-8fa7-1a2c33babb46",
+      "name": "Filtra los ultimos 5 mins de mensajes1"
+    },
+    {
+      "parameters": {
+        "maxItems": 20
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        1472
+      ],
+      "id": "5132955e-f9a1-4eef-9c5c-ebee69638eb2",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "role",
+              "fieldValue": "asistente"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('AI Agent1').item.json.output }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        1264
+      ],
+      "id": "1f5365a1-b970-4d2c-8e29-764656261783",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        944
+      ],
+      "id": "86e37386-d4af-43a4-a87f-ca2e746edde9",
+      "name": "Sort2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84070eff-ca75-4b5c-80d6-0e3a7553f432",
+              "leftValue": "={{ $('AI Agent1').item.json.output }}",
+              "rightValue": "Información guardada",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "fe722503-9486-4563-a190-d4bef830db86",
+              "leftValue": "={{ $('AI Agent1').item.json.output }}",
+              "rightValue": "exitosamente",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3120,
+        1264
+      ],
+      "id": "178bc598-dadf-408c-b149-d75daa414df8",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "=+541154773088",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2912,
+        1264
+      ],
+      "id": "1349947b-8908-4db3-a8db-089aec99d881",
+      "name": "ENVIAR RESPUESTA",
+      "webhookId": "9773b429-2804-44db-b323-263d19e263fe",
+      "executeOnce": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "+541154773088",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2864,
+        912
+      ],
+      "id": "ef06be27-79c1-4cac-8357-2cc213e8cea8",
+      "name": "Send message1",
+      "webhookId": "96b91f46-4da3-4418-b2d4-f73ff5ba95d8",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "role",
+              "fieldValue": "asistente"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('AI Agent2').item.json.output }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        912
+      ],
+      "id": "8ae417fe-066f-461b-932c-f7f1ab1e1d8b",
+      "name": "Create a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "alquileresdgs@gmail.com",
+          "mode": "list",
+          "cachedResultName": "alquileresdgs@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        2640,
+        1072
+      ],
+      "id": "6f48dc9a-0773-4f4a-80b8-4979c091529e",
+      "name": "Create an event in Google Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "9F03o6YtIc19uAph",
+          "name": "Alquileres dgs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "+541154773088",
+        "textBody": "Por favor, mandame el dia y horario que queres que se agende el evento en Google Calendar.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        768
+      ],
+      "id": "6ec01c30-0ec6-4880-864e-5d7166204c21",
+      "name": "Send message",
+      "webhookId": "2afe7665-5f89-40a8-97bf-63655022c528",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d65b0797-2e4f-42fc-9383-edf17d7301b1",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "/Si, guardar.",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2096,
+        944
+      ],
+      "id": "7daf0010-29f2-4663-b4af-1b5f6869577d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "users",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        768
+      ],
+      "id": "ff3dc7b5-9a92-4475-9245-4efec021501b",
+      "name": "Get user1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Get user1').item.json.id  || $('Create user').item.json.id}}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].button.text }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        768
+      ],
+      "id": "3d6d93b0-3876-41c3-ad3d-9658db55cd26",
+      "name": "Add history2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "id",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        208,
+        768
+      ],
+      "id": "61856bbf-513e-4b54-85b7-ff48a677d387",
+      "name": "Sort3"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "role,content,url_imagen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        768
+      ],
+      "id": "5bd27f18-1616-46d8-9cdc-de2265f828d2",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.data;\nconst history = data.map(m => m.role + ': ' + m.content).join('\\n');\n\nreturn [{ json: {history} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        768
+      ],
+      "id": "18616528-2c68-42f1-90db-250891184984",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "getAll",
+        "tableId": "history",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "created_at",
+              "condition": "gte",
+              "keyValue": "={{ $now.minus({hours: 24}).toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        768
+      ],
+      "id": "f386971c-391e-400d-8560-b2d001d4687f",
+      "name": "Get history2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages = $(\"Limit2\").all().map(item => item.json);\n\n// now en Argentina (UTC-3)\nconst now = new Date();\nconst nowArgentina = new Date(now.getTime() - 3 * 60 * 60 * 1000);\nconst fiveMinutesAgo = new Date(nowArgentina.getTime() - 5 * 60 * 1000);\n\nconst recentMessages = messages.filter(msg => {\n  const msgDate = new Date(msg.created_at);\n  return msgDate >= fiveMinutesAgo && msgDate <= nowArgentina;\n});\n\nreturn recentMessages;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        768
+      ],
+      "id": "17cde3fa-5c39-48d4-83b2-6397da913fca",
+      "name": "Filtra los ultimos 5 mins de mensajes2"
+    },
+    {
+      "parameters": {
+        "maxItems": 20
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        416,
+        768
+      ],
+      "id": "0cac0073-62e5-4a0e-80d3-f5d7e31d310f",
+      "name": "Limit2"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        832,
+        768
+      ],
+      "id": "46372943-e4a7-4782-9cc7-f9628e832496",
+      "name": "Sort4"
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "role",
+              "fieldValue": "asistente"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "=Por favor, mandame el dia y horario que queres que se agende el evento en Google Calendar."
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1664,
+        768
+      ],
+      "id": "cec06a1c-492e-4cc4-911c-cd5cef92432a",
+      "name": "Create a row2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Capturamos los mensajes\nconst mensajes = $(\"Filtra los ultimos 5 mins de mensajes\").all();\n\n// 2. Verificamos que existan al menos 2 ítems\nif (mensajes[2]) {\n    const anteultimo = mensajes[2];\n    \n    // 3. Buscamos el texto en las propiedades comunes de WhatsApp (body o text)\n    const contenido = anteultimo.json.content;\n\n    // 4. Limpiamos el texto: quitamos espacios y pasamos a minúsculas\n    // Esto hace que \"/Si, guardar.\" y \"/si, guardar \" funcionen igual\n    const textoLimpio = contenido.trim().toLowerCase();\n\n    if (textoLimpio === \"/si, guardar.\") {\n        return [anteultimo]; \n    } else {\n        // Log para debug: esto aparecerá en la consola de n8n si no coincide\n        console.log(\"No coincidió. Recibido:\", textoLimpio);\n    }\n}\n\nreturn mensajes;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        944
+      ],
+      "id": "df22134d-00d8-454c-a784-7d5740508812",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2496,
+        1072
+      ],
+      "id": "6ad13f88-e0cd-4657-be49-cccca104dd35",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "A2ysi5u7Ic9B1BTv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Este es el historial de mensajes de los ultimos 5 minutos, esta ordenado de arriba lo mas viejo, abajo lo mas nuevo: \n{{ $('Historial').item.json.history || $('Historial con imagenes').item.json.history }}",
+        "options": {
+          "systemMessage": "=# SYSTEM PROMPT: Agente de Calendario (Huso Horario: Argentina)\n\n## ROL\nEres un agente especializado en extraer datos y gestionar eventos en Google Calendar. Tu objetivo es procesar el texto del usuario, extraer la información clave, agendar el evento usando la herramienta correspondiente y confirmar la acción.\n\n---\n\n# CONTEXTO TEMPORAL\nFecha y hora actual:\n{{ $now.setZone('America/Argentina/Buenos_Aires') }} (UTC-3)\n\nUtiliza estrictamente este contexto como base para calcular fechas y horas relativas (ej. \"mañana a la tarde\", \"el próximo martes\"). Si no se menciona el año, asume {{ $now.year }}.\n\n---\n\n# REGLAS DE EXTRACCIÓN\nCuando el usuario envíe un mensaje, identifica y formatea los siguientes datos antes de agendar:\n1. **Título:** El motivo, nombre del evento o acción a realizar y entre parentesis el departamento.\n2. **Fecha:** Día, mes y año exactos.\n3. **Hora:** Horario de inicio. Convierte todo a formato de 24hs (ej. \"5 de la tarde\" -> 17:00). Si no se especifica duración, asume 1 hora por defecto.\n\n---\n\n# FLUJO OBLIGATORIO DE EJECUCIÓN\nDebes seguir este orden de forma secuencial y sin hacer preguntas al usuario:\n\n## Paso 1 — Ejecutar Herramienta (Google Calendar)\nEjecuta la herramienta de Google Calendar enviando los datos extraídos para crear el evento.\n- **CRÍTICO:** Asegúrate de enviar los tiempos considerando el huso horario **UTC-3 (Argentina)** para evitar desfasajes.\n- Espera la confirmación interna de la herramienta de que el evento fue creado exitosamente.\n\n## Paso 2 — Respuesta al Usuario\nUna vez confirmada la creación del evento, responde **ÚNICAMENTE** con este formato estricto, sin agregar saludos, confirmaciones extra ni texto adicional:\n\n* **Evento:** [Título extraído]\n* **Día:** [DD/MM/AAAA]\n* **Horario:** [HH:MM] (Hora local Argentina)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2496,
+        896
+      ],
+      "id": "167582c7-b5af-46b1-8aed-1e2448d6a432",
+      "name": "AI Agent2",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.data;\nconst history = data.map(m => m.role + ': ' + m.content).join('\\n');\n\nreturn [{ json: {history} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        944
+      ],
+      "id": "500ba4b4-7146-4181-aac3-47b0376ff86a",
+      "name": "Historial"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.data;\nconst history = data.map(m => m.role + ': ' + m.content).join('\\n');\n\nreturn [{ json: {history} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        1472
+      ],
+      "id": "f75b9b94-1e35-42ff-adaf-f829464b952a",
+      "name": "Historial con imagenes"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Este es el historial de mensajes de los ultimos 5 minutos, esta ordenado de arriba lo mas viejo, abajo lo mas nuevo: \n{{ $('Edit Fields1').item.json.Historial }}",
+        "options": {
+          "systemMessage": "=# SYSTEM PROMPT: AGENTE DE GESTIÓN INMOBILIARIA (WHATSAPP)\n\n**Rol:** Actuá como un asistente logístico inteligente especializado en la gestión de departamentos y notas de estado. Tu objetivo es procesar mensajes de texto para identificar departamentos y registrar información relevante en la base de datos.\n\n## 🛠 FLUJO DE TRABAJO OBLIGATORIO\n\n1. **ANÁLISIS DE MENSAJE:**\n   - Identificá el **departamento** (dirección completa o parcial, ej: \"San Benito de Palermo 1584\").\n   - Identificá la **nota** o contenido del mensaje (ej: \"esta cusco durmiendo\").\n\n2. **VERIFICACIÓN (Tool: `buscar_departamento`):**\n   - Ejecutá la búsqueda con el nombre del depto detectado.\n   - **ESCENARIO A (Existe):** Obtené el nombre/ID y procedé al guardado.\n   - **ESCENARIO B (No existe):** Informá al usuario de forma natural que el depto no está registrado y preguntale explícitamente: \"¿Querés que lo cree?\".\n\n3. **CREACIÓN (Tool: `crear_departamento`):**\n   - Si el usuario confirma (responde \"sí\", \"dale\", \"crealo\"), ejecutá esta herramienta para dar de alta la unidad.\n\n4. **REGISTRO FINAL (Tool: `guardar_mensaje`):**\n   - Una vez que el departamento está confirmado o creado, vinculá la nota al depto y guardalo en Supabase.\n\n## 📝 REGLAS DE INTERACCIÓN Y FORMATO\n\n- **Tono:** Profesional, directo y adaptado a WhatsApp.\n- **Formato de Confirmación:** Una vez guardado con éxito, respondé **exactamente** con esta estructura de emojis:\n\n✅ **Información guardada exitosamente**\n📍 **Depto:** [Nombre o Dirección del Departamento]\n💬 **Nota:** [Contenido del mensaje]\n\n- **Ambigüedad:** Si el mensaje es confuso y no podés distinguir la dirección de la nota, pedí una aclaración antes de ejecutar cualquier herramienta.\n\n## 🧰 HERRAMIENTAS DISPONIBLES\n- `buscar_departamento`: Busca coincidencias en la base de datos.\n- `crear_departamento`: Registra una nueva dirección.\n- `guardar_mensaje`: Inserta la nota final en la tabla de Supabase vinculada al departamento."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2272,
+        1824
+      ],
+      "id": "c0a60a1d-094a-4cac-8307-b5a27b775a61",
+      "name": "AI Agent",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        2016
+      ],
+      "id": "66f1ab2d-2eeb-4064-89f0-e2dff10ff7bc",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "A2ysi5u7Ic9B1BTv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Úsala para guardar una nota o mensaje sobre un departamento específico. Requiere el ID del departamento y el texto a guardar.",
+        "tableId": "mensajes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "departamento_id",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues0_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues1_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "url_imagen",
+              "fieldValue": "={{ $('Aggregate1').context.executed ? $('Aggregate1').item.json.data[0].url_imagen : null }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        2128
+      ],
+      "id": "6841612e-1bda-400a-87b2-dcb6f9709295",
+      "name": "Guardar mensaje1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "departamentos",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "address",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues0_Field_Value', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        2064
+      ],
+      "id": "60bcd7a2-7f56-4237-a86b-35a7fa05347c",
+      "name": "Crear depto1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "departamentos",
+        "limit": "=50",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "address",
+              "condition": "ilike",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions0_Field_Value', `Aca deberias buscar el departamento segun la direccion total o parcial que porpuso el usuario. Envuelve la direccion entre * por ejemplo: *san benito*.`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        2128
+      ],
+      "id": "da98d5c1-1ca0-46b2-b71f-2c3a3964f66d",
+      "name": "Get deptos1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "role",
+              "fieldValue": "asistente"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('AI Agent').item.json.output }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.setZone('America/Argentina/Buenos_Aires') }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        1824
+      ],
+      "id": "e4dac40e-da22-435f-a68b-9043fd62a0ba",
+      "name": "Create a row3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6uzEkomO6JzLuuM0",
+          "name": "Cuenta de chatbot de papa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84070eff-ca75-4b5c-80d6-0e3a7553f432",
+              "leftValue": "={{ $('AI Agent').item.json.output }}",
+              "rightValue": "Información guardada",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "fe722503-9486-4563-a190-d4bef830db86",
+              "leftValue": "={{ $('AI Agent').item.json.output }}",
+              "rightValue": "exitosamente",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2896,
+        1824
+      ],
+      "id": "a3d0cc29-39ba-4c4e-908c-46103f07be67",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "=+541154773088",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2688,
+        1824
+      ],
+      "id": "b8fe2691-3b52-49cd-8924-4edc951d80f4",
+      "name": "ENVIAR RESPUESTA1",
+      "webhookId": "9773b429-2804-44db-b323-263d19e263fe",
+      "executeOnce": true,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "+541154773088",
+        "textBody": "=POR FAVOR MANDAME: \"/Si, guardar.\"\nSi queres guardar en google calendar.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3136,
+        1712
+      ],
+      "id": "71e7547d-558c-430b-999b-a49f78be9ec5",
+      "name": "Send message3",
+      "webhookId": "e732efb7-1b6d-4991-a3d8-c95363e9d739",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d7dbafbe-f700-4999-b741-5904c5f8015b",
+              "name": "Historial",
+              "value": "={{ $json.history }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1664,
+        944
+      ],
+      "id": "4f034d06-94bc-40fb-a42c-3038d2c68799",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d7dbafbe-f700-4999-b741-5904c5f8015b",
+              "name": "Historial",
+              "value": "={{ $json.history }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        1472
+      ],
+      "id": "711eb163-1f39-4d7a-894c-df51404d4d19",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "426074767259019",
+        "recipientPhoneNumber": "+541154773088",
+        "template": "recordatorio_de_turno|es_AR"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3360,
+        1152
+      ],
+      "id": "279c605d-055f-4670-8ecb-a494f8d62cfc",
+      "name": "Send template",
+      "webhookId": "e732efb7-1b6d-4991-a3d8-c95363e9d739",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "5U7LXQhSe2YeI7o9",
+          "name": "Cuenta con numero de test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a7b6116c-c494-49e7-b97f-772bf536f35e",
+              "leftValue": "={{ $json.messages[0].button.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "21c93fa6-9d8f-42f5-a520-36eeb209b264",
+              "leftValue": "={{ $json.messages[0].button.text }}",
+              "rightValue": "/Si, guardar.",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -656,
+        832
+      ],
+      "id": "6a38a337-7406-4b2b-91cc-c1134f504e03",
+      "name": "Guardar en el calendario o conversacion normal?1",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "content": "Parte de google calendar",
+        "height": 224,
+        "width": 2624
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        688
+      ],
+      "typeVersion": 1,
+      "id": "0ebfa2eb-52a1-4ebd-add7-40145366c4fa",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Texto o imagen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get user": {
+      "main": [
+        [
+          {
+            "node": "User exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User exists?": {
+      "main": [
+        [
+          {
+            "node": "Add history",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create user": {
+      "main": [
+        [
+          {
+            "node": "Welcome message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Welcome message": {
+      "main": [
+        [
+          {
+            "node": "Add history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add history": {
+      "main": [
+        [
+          {
+            "node": "Get history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get history": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "ENVIAR RESPUESTA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get user2": {
+      "main": [
+        [
+          {
+            "node": "User exists?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User exists?1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create user1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create user1": {
+      "main": [
+        [
+          {
+            "node": "Welcome message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Welcome message1": {
+      "main": [
+        [
+          {
+            "node": "Add history1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add history1": {
+      "main": [
+        [
+          {
+            "node": "Get history1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Texto o imagen?": {
+      "main": [
+        [
+          {
+            "node": "Guardar en el calendario o conversacion normal?1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If imagen": {
+      "main": [
+        [
+          {
+            "node": "Download media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Add history1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Get user2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar mensaje": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear depto": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get deptos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtra los ultimos 5 mins de mensajes": {
+      "main": [
+        [
+          {
+            "node": "Sort2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Filtra los ultimos 5 mins de mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort1": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Historial con imagenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get history1": {
+      "main": [
+        [
+          {
+            "node": "Sort1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtra los ultimos 5 mins de mensajes1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "Filtra los ultimos 5 mins de mensajes1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ENVIAR RESPUESTA": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message1": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message": {
+      "main": [
+        [
+          {
+            "node": "Create a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get user1": {
+      "main": [
+        [
+          {
+            "node": "Add history2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add history2": {
+      "main": [
+        [
+          {
+            "node": "Get history2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort3": {
+      "main": [
+        [
+          {
+            "node": "Limit2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get history2": {
+      "main": [
+        [
+          {
+            "node": "Sort3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtra los ultimos 5 mins de mensajes2": {
+      "main": [
+        [
+          {
+            "node": "Sort4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit2": {
+      "main": [
+        [
+          {
+            "node": "Filtra los ultimos 5 mins de mensajes2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort4": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Historial": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Historial con imagenes": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "ENVIAR RESPUESTA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar mensaje1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear depto1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get deptos1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Send message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a row3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ENVIAR RESPUESTA1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message3": {
+      "main": [
+        [
+          {
+            "node": "Create a row3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send template": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en el calendario o conversacion normal?1": {
+      "main": [
+        [
+          {
+            "node": "Get user1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "WhatsApp Trigger": [
+      {
+        "messaging_product": "whatsapp",
+        "metadata": {
+          "display_phone_number": "15551361110",
+          "phone_number_id": "426074767259019"
+        },
+        "statuses": [
+          {
+            "id": "wamid.HBgNNTQ5MTE1NDc3MzA4OBUCABEYEkY0MjQzOURGMkE1OURGMzNEMAA=",
+            "status": "delivered",
+            "timestamp": "1774524427",
+            "recipient_id": "5491154773088",
+            "pricing": {
+              "billable": true,
+              "pricing_model": "PMP",
+              "category": "marketing",
+              "type": "regular"
+            }
+          }
+        ],
+        "field": "messages"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dfa3b3548e536575e6c3b5bb0547ac88b0e4fd6aa4e8543015cc0eb8f5e80bd6"
+  }
+}
