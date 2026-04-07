@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 calendar_sticky_turns: Dict[str, int] = {}
 
 
-@router.get("/", response_class=PlainTextResponse)
+@router.get("/webhook", response_class=PlainTextResponse)
 async def verify_webhook(
     hub_mode: str = Query(alias="hub.mode"),
     hub_verify_token: str = Query(alias="hub.verify_token"),
@@ -38,7 +38,7 @@ async def verify_webhook(
         raise HTTPException(status_code=403, detail="Verification failed")
 
 
-@router.post("/")
+@router.post("/webhook")
 async def webhook(request: Request):
     """
     Main webhook endpoint for receiving WhatsApp messages

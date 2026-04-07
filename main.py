@@ -26,8 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routes
-app.include_router(webhook_router, prefix="/webhook", tags=["webhook"])
+# Routes (sin prefix para evitar problemas con trailing slash)
+app.include_router(webhook_router, tags=["webhook"])
 
 @app.get("/")
 async def root():
