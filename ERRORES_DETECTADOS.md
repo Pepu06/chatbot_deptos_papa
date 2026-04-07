@@ -43,6 +43,8 @@ Error creating user: {'code': 'PGRST204', 'details': None, 'hint': None,
 'message': "Could not find the 'phone' column of 'users' in the schema cache"}
 ```
 
+**ACTUALIZACIÓN:** ✅ El campo `phone` NO es necesario. El `id` ya ES el número de teléfono.
+
 ### Problema 2: Foreign key constraint violation
 ```
 Error adding message to history: {'code': '23503', 
@@ -51,41 +53,29 @@ Error adding message to history: {'code': '23503',
 ```
 
 ### Causa
-La tabla `users` en Supabase:
-- No existe, O
-- Existe pero le falta la columna `phone`, O
-- Tiene una estructura diferente a la esperada
+La tabla `users` en Supabase intentaba insertar el campo `phone` que no existe.
+**En realidad, el campo `id` ya contiene el número de teléfono de WhatsApp.**
 
 ### Solución Aplicada en el Código
 Actualicé `services/supabase_client.py` para:
-1. Intentar crear usuario con todos los campos
-2. Si falla, reintentar sin el campo `phone`
-3. Registrar mejor los errores
+1. **Eliminar** el intento de insertar el campo `phone`
+2. Solo insertar `id` (que ya ES el teléfono) y `name`
+3. Simplificar la lógica de creación de usuario
 
 ### ⚠️ ACCIÓN REQUERIDA EN SUPABASE
 
 **Debes ejecutar este SQL en Supabase:**
 
 ```sql
--- 1. Verificar estructura actual
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'users'
-ORDER BY ordinal_position;
-
--- 2. Crear o actualizar tabla users
+-- Crear tabla users (id es el número de teléfono)
 CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY,  -- WhatsApp phone number
   name TEXT,
-  phone TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Si la tabla existe pero le falta phone:
-ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
-
--- 3. Verificar/crear tabla history
+-- Verificar/crear tabla history
 CREATE TABLE IF NOT EXISTS history (
   id SERIAL PRIMARY KEY,
   user_id TEXT REFERENCES users(id),

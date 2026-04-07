@@ -66,11 +66,10 @@ Edita `.env` con tus credenciales reales.
 Crea las siguientes tablas en Supabase:
 
 ```sql
--- Tabla de usuarios
+-- Tabla de usuarios (id es el número de WhatsApp)
 CREATE TABLE users (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY,  -- WhatsApp phone number
   name TEXT,
-  phone TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

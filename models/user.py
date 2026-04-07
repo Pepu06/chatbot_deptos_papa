@@ -8,9 +8,9 @@ from datetime import datetime
 
 class UserBase(BaseModel):
     """Base user model"""
-    id: str = Field(..., description="WhatsApp user ID (wa_id)")
+    id: str = Field(..., description="WhatsApp user ID / phone number (wa_id)")
     name: Optional[str] = Field(None, description="User name")
-    phone: Optional[str] = Field(None, description="Phone number")
+    phone: Optional[str] = Field(None, description="Phone number (deprecated - use id)")
 
 
 class UserCreate(UserBase):

@@ -9,17 +9,13 @@ ORDER BY ordinal_position;
 
 -- 2. Si la tabla no existe o le falta la columna phone, ejecuta esto:
 
--- Opción A: Si la tabla NO existe, créala desde cero:
+-- Crear tabla users (id es el número de teléfono de WhatsApp)
 CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY,  -- WhatsApp phone number (wa_id)
   name TEXT,
-  phone TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
-
--- Opción B: Si la tabla existe pero le falta la columna phone, agrégala:
-ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
 
 -- 3. Verificar/crear tabla history
 CREATE TABLE IF NOT EXISTS history (
