@@ -33,16 +33,33 @@ class SupabaseService:
     async def create_user(self, user_data: UserCreate) -> Optional[User]:
         """Create a new user"""
         try:
-            response = self.client.table("users").insert({
+            # Preparar datos - solo incluir phone si está presente
+            user_dict = {
                 "id": user_data.id,
                 "name": user_data.name,
-                "phone": user_data.phone
-            }).execute()
+            }
+            
+            # Solo agregar phone si está definido y no es None
+            if user_data.phone is not None:
+                user_dict["phone"] = user_data.phone
+            
+            response = self.client.table("users").insert(user_dict).execute()
             if response.data and len(response.data) > 0:
                 return User(**response.data[0])
             return None
         except Exception as e:
             print(f"Error creating user: {e}")
+            # Intentar crear sin el campo phone si falló
+            try:
+                response = self.client.table("users").insert({
+                    "id": user_data.id,
+                    "name": user_data.name
+                }).execute()
+                if response.data and len(response.data) > 0:
+                    print(f"✅ User created without phone field")
+                    return User(**response.data[0])
+            except Exception as e2:
+                print(f"Error creating user (retry without phone): {e2}")
             return None
     
     # Message/History operations
