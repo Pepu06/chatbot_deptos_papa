@@ -18,7 +18,7 @@ class DepartmentCreate(DepartmentBase):
 
 class Department(DepartmentBase):
     """Department model with ID and timestamps"""
-    id: int = Field(..., description="Department ID")
+    id: str = Field(..., description="Department UUID")
     created_at: Optional[datetime] = None
     
     class Config:

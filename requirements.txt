@@ -9,8 +9,7 @@ pydantic==2.9.2
 pydantic-settings==2.6.1
 
 # Database
-supabase==2.9.0
-postgrest==0.17.2
+psycopg2-binary==2.9.10
 
 # Google services
 google-generativeai==0.8.3

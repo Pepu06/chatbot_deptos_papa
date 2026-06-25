@@ -11,13 +11,18 @@ import asyncio
 # Function declarations for Gemini
 buscar_departamento_declaration = FunctionDeclaration(
     name="buscar_departamento",
-    description="Úsala para buscar departamentos en la base de datos por dirección. Busca coincidencias parciales.",
+    description=(
+        "Busca una propiedad/departamento en el sistema por dirección (calle y número). "
+        "Úsala siempre antes de guardar un mensaje. "
+        "Si no se encuentra, informa al usuario que la propiedad no está registrada en el sistema "
+        "y que debe cargarla primero desde la aplicación principal."
+    ),
     parameters={
         "type": "object",
         "properties": {
             "direccion": {
                 "type": "string",
-                "description": "Dirección total o parcial del departamento a buscar. Ej: 'San Benito de Palermo 1584' o 'San Benito'"
+                "description": "Calle y número del departamento. Ej: 'Formosa 380' o 'San Benito de Palermo 1584'"
             }
         },
         "required": ["direccion"]
@@ -26,14 +31,14 @@ buscar_departamento_declaration = FunctionDeclaration(
 
 crear_departamento_declaration = FunctionDeclaration(
     name="crear_departamento",
-    description="Úsala para crear/registrar un nuevo departamento en la base de datos cuando el usuario confirme la creación.",
+    description=(
+        "NO usar — las propiedades se gestionan en el sistema principal, no desde el bot. "
+        "Si la propiedad no existe, informar al usuario."
+    ),
     parameters={
         "type": "object",
         "properties": {
-            "direccion": {
-                "type": "string",
-                "description": "Dirección completa del departamento a crear"
-            }
+            "direccion": {"type": "string", "description": "Dirección"}
         },
         "required": ["direccion"]
     }
@@ -46,8 +51,8 @@ guardar_mensaje_declaration = FunctionDeclaration(
         "type": "object",
         "properties": {
             "departamento_id": {
-                "type": "integer",
-                "description": "ID del departamento (obtenido de buscar_departamento o crear_departamento)"
+                "type": "string",
+                "description": "ID (UUID) del departamento (obtenido de buscar_departamento o crear_departamento)"
             },
             "contenido": {
                 "type": "string",
@@ -159,14 +164,13 @@ def crear_departamento(direccion: str) -> Dict[str, Any]:
 
 
 def guardar_mensaje(
-    departamento_id: int,
+    departamento_id: str,
     contenido: str,
     url_imagen: str = None
 ) -> Dict[str, Any]:
     """Save a message/note about a department"""
     try:
-        # Convertir a int por si Gemini envía float
-        departamento_id = int(float(departamento_id))
+        departamento_id = str(departamento_id).strip()
         
         loop = asyncio.get_event_loop()
         if loop.is_running():

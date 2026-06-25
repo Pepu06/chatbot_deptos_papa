@@ -17,15 +17,18 @@ class Settings(BaseSettings):
     )
     
     # WhatsApp Business API
-    whatsapp_client_id: str
+    whatsapp_client_id: Optional[str] = None
     whatsapp_token: str
     whatsapp_verify_token: str = "my_verify_token_123"
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_api_url: str = "https://graph.facebook.com/v21.0"
-    
-    # Supabase
-    supabase_url: str
-    supabase_anon_key: str
+
+    # PostgreSQL (Railway provee DATABASE_URL automáticamente)
+    database_url: str
+
+    # Supabase (deprecado — se migró a PostgreSQL en Railway)
+    supabase_url: Optional[str] = None
+    supabase_anon_key: Optional[str] = None
     supabase_service_key: Optional[str] = None
     
     # Google Gemini

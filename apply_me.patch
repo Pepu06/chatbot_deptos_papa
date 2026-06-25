@@ -1,0 +1,659 @@
+diff --git a/Dockerfile b/Dockerfile
+index 2cb8dbd..3515581 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -13,4 +13,4 @@ COPY . .
+ EXPOSE 8000
+ 
+ # Run application
+-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
++CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+diff --git a/agents/property_agent.py b/agents/property_agent.py
+index 278a58d..ec1fc9b 100644
+--- a/agents/property_agent.py
++++ b/agents/property_agent.py
+@@ -10,42 +10,64 @@ from typing import Optional, List, Dict
+ # System prompt from n8n workflow
+ PROPERTY_AGENT_PROMPT = """# SYSTEM PROMPT: AGENTE DE GESTIÓN INMOBILIARIA (WHATSAPP)
+ 
+-**Rol:** Actuá como un asistente logístico inteligente especializado en la gestión de departamentos y notas de estado. Tu objetivo es procesar mensajes de texto para identificar departamentos y registrar información relevante en la base de datos.
++**Rol:** Asistente logístico para registrar notas sobre departamentos. Procesás mensajes en lenguaje natural, identificás la propiedad y guardás la información.
+ 
+-## 🛠 FLUJO DE TRABAJO OBLIGATORIO
++## 🛠 FLUJO DE TRABAJO
+ 
+-1. **ANÁLISIS DE MENSAJE:**
+-   - Identificá el **departamento** (dirección completa o parcial, ej: "San Benito de Palermo 1584").
+-   - Identificá la **nota** o contenido del mensaje (ej: "esta cusco durmiendo").
++### PASO 1 — Extraer dirección y nota del mensaje
+ 
+-2. **VERIFICACIÓN (Tool: `buscar_departamento`):**
+-   - Ejecutá la búsqueda con el nombre del depto detectado.
+-   - **ESCENARIO A (Existe):** Obtené el nombre/ID y procedé al guardado.
+-   - **ESCENARIO B (No existe):** Informá al usuario de forma natural que el depto no está registrado y preguntale explícitamente: "¿Querés que lo cree?".
++El usuario puede escribir de muchas formas:
++- "en formosa 380 hay una gotera"
++- "formosa 380 - gotera en el techo"
++- "formosa, hay una gotera"
++- "en la formosa hay problema con la llave"
+ 
+-3. **CREACIÓN (Tool: `crear_departamento`):**
+-   - Si el usuario confirma (responde "sí", "dale", "crealo"), ejecutá esta herramienta para dar de alta la unidad.
++Extraé:
++- **Dirección**: la calle (y número si lo menciona). Ej: "formosa", "formosa 380", "san benito de palermo 1584"
++- **Nota**: el resto del mensaje. Ej: "hay una gotera", "problema con la llave"
+ 
+-4. **REGISTRO FINAL (Tool: `guardar_mensaje`):**
+-   - Una vez que el departamento está confirmado o creado, vinculá la nota al depto y guardalo en Supabase.
++Si el mensaje es ambiguo y no podés separar la dirección de la nota, pedí aclaración antes de seguir.
+ 
+-## 📝 REGLAS DE INTERACCIÓN Y FORMATO
++### PASO 2 — Buscar la propiedad (`buscar_departamento`)
+ 
+-- **Tono:** Profesional, directo y adaptado a WhatsApp.
+-- **Formato de Confirmación:** Una vez guardado con éxito, respondé **exactamente** con esta estructura:
++Buscá usando solo la calle (y número si lo tenés). Ejemplos de búsqueda:
++- Si dice "formosa 380" → buscá "formosa 380"
++- Si dice "en formosa" sin número → buscá "formosa"
++
++**Según el resultado:**
++
++**A) Una sola propiedad encontrada:**
++→ Procedé directamente al Paso 3.
++
++**B) Varias propiedades encontradas:**
++→ Listálas y preguntale al usuario cuál es. Ejemplo:
++"Encontré varias propiedades con ese nombre, ¿cuál es?
++1️⃣ Formosa 380, Piso 2 Dpto A - Palermo
++2️⃣ Formosa 100 - Belgrano
++Respondé con el número."
++→ Esperá la respuesta del usuario, luego guardá en la elegida.
++
++**C) Ninguna propiedad encontrada:**
++→ Informá: "No encontré ninguna propiedad con esa dirección en el sistema. Tiene que estar cargada en la aplicación principal para poder registrar notas."
++→ NO intentés crear la propiedad.
++
++### PASO 3 — Guardar la nota (`guardar_mensaje`)
++
++Usá el ID de la propiedad confirmada y guardá la nota.
++
++### PASO 4 — Confirmar al usuario
++
++Respondé exactamente con este formato:
+ 
+ ✅ **Información guardada**
+-📍 **Depto:** [Nombre o Dirección del Departamento]
+-💬 **Nota:** [Contenido del mensaje]
++📍 **Depto:** [dirección completa de la propiedad]
++💬 **Nota:** [nota registrada]
+ 
+ ¿Querés agendar algo en el calendario para este departamento?
+ 
+-- **Ambigüedad:** Si el mensaje es confuso y no podés distinguir la dirección de la nota, pedí una aclaración antes de ejecutar cualquier herramienta.
+-
+-## 🧰 HERRAMIENTAS DISPONIBLES
+-- `buscar_departamento`: Busca coincidencias en la base de datos.
+-- `crear_departamento`: Registra una nueva dirección.
+-- `guardar_mensaje`: Inserta la nota final en la tabla de Supabase vinculada al departamento."""
++## 🧰 HERRAMIENTAS
++- `buscar_departamento`: Busca propiedades por dirección (calle y/o número).
++- `guardar_mensaje`: Guarda la nota vinculada al ID de la propiedad encontrada."""
+ 
+ 
+ class PropertyAgent(BaseAgent):
+diff --git a/config/settings.py b/config/settings.py
+index 4d4c444..c44999e 100644
+--- a/config/settings.py
++++ b/config/settings.py
+@@ -17,15 +17,18 @@ class Settings(BaseSettings):
+     )
+     
+     # WhatsApp Business API
+-    whatsapp_client_id: str
++    whatsapp_client_id: Optional[str] = None
+     whatsapp_token: str
+     whatsapp_verify_token: str = "my_verify_token_123"
+     whatsapp_phone_number_id: Optional[str] = None
+     whatsapp_api_url: str = "https://graph.facebook.com/v21.0"
+-    
+-    # Supabase
+-    supabase_url: str
+-    supabase_anon_key: str
++
++    # PostgreSQL (Railway provee DATABASE_URL automáticamente)
++    database_url: str
++
++    # Supabase (deprecado — se migró a PostgreSQL en Railway)
++    supabase_url: Optional[str] = None
++    supabase_anon_key: Optional[str] = None
+     supabase_service_key: Optional[str] = None
+     
+     # Google Gemini
+diff --git a/models/department.py b/models/department.py
+index 069cede..bc3177e 100644
+--- a/models/department.py
++++ b/models/department.py
+@@ -18,7 +18,7 @@ class DepartmentCreate(DepartmentBase):
+ 
+ class Department(DepartmentBase):
+     """Department model with ID and timestamps"""
+-    id: int = Field(..., description="Department ID")
++    id: str = Field(..., description="Department UUID")
+     created_at: Optional[datetime] = None
+     
+     class Config:
+diff --git a/railway_init_db.sql b/railway_init_db.sql
+new file mode 100644
+index 0000000..e13cffa
+--- /dev/null
++++ b/railway_init_db.sql
+@@ -0,0 +1,22 @@
++-- Tablas del chatbot WhatsApp
++-- Ejecutar una sola vez en Railway: PostgreSQL service → Console → psql $DATABASE_URL
++
++-- Usuarios de WhatsApp
++CREATE TABLE IF NOT EXISTS chatbot_users (
++  id         TEXT PRIMARY KEY,   -- número WhatsApp (wa_id)
++  name       TEXT,
++  created_at TIMESTAMP DEFAULT NOW()
++);
++
++-- Historial de conversación (ventana de 5 minutos)
++CREATE TABLE IF NOT EXISTS chatbot_history (
++  id         SERIAL PRIMARY KEY,
++  user_id    TEXT REFERENCES chatbot_users(id),
++  content    TEXT NOT NULL,
++  role       TEXT NOT NULL,
++  url_imagen TEXT,
++  created_at TIMESTAMP DEFAULT NOW()
++);
++
++CREATE INDEX IF NOT EXISTS idx_chatbot_history_user ON chatbot_history(user_id);
++CREATE INDEX IF NOT EXISTS idx_chatbot_history_ts   ON chatbot_history(created_at);
+diff --git a/requirements.txt b/requirements.txt
+index 4a5c4c6..99e8b5f 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -9,8 +9,7 @@ pydantic==2.9.2
+ pydantic-settings==2.6.1
+ 
+ # Database
+-supabase==2.9.0
+-postgrest==0.17.2
++psycopg2-binary==2.9.10
+ 
+ # Google services
+ google-generativeai==0.8.3
+diff --git a/services/supabase_client.py b/services/supabase_client.py
+index 154ea7e..3c8d126 100644
+--- a/services/supabase_client.py
++++ b/services/supabase_client.py
+@@ -1,8 +1,11 @@
+ """
+-Supabase client service
+-Handles all database operations
++PostgreSQL database client
++Usa tablas chatbot_* para usuarios/historial y propiedad_actualizaciones para mensajes.
+ """
+-from supabase import create_client, Client
++import uuid
++import psycopg2
++import psycopg2.pool
++import psycopg2.extras
+ from config.settings import settings
+ from models import User, UserCreate, Message, MessageCreate, Department, DepartmentCreate
+ from typing import List, Optional
+@@ -10,157 +13,196 @@ from datetime import datetime, timedelta
+ 
+ 
+ class SupabaseService:
+-    """Service for interacting with Supabase database"""
+-    
++    """Database service backed by PostgreSQL (Railway)"""
++
+     def __init__(self):
+-        self.client: Client = create_client(
+-            settings.supabase_url,
+-            settings.supabase_anon_key
+-        )
+-    
+-    # User operations
++        self._pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
++
++    def _get_pool(self) -> psycopg2.pool.ThreadedConnectionPool:
++        if self._pool is None:
++            self._pool = psycopg2.pool.ThreadedConnectionPool(
++                1, 10,
++                settings.database_url,
++                cursor_factory=psycopg2.extras.RealDictCursor
++            )
++        return self._pool
++
++    def _acquire(self):
++        return self._get_pool().getconn()
++
++    def _release(self, conn):
++        self._get_pool().putconn(conn)
++
++    # ------------------------------------------------------------------ #
++    # Users  →  chatbot_users
++    # ------------------------------------------------------------------ #
++
+     async def get_user(self, user_id: str) -> Optional[User]:
+-        """Get user by WhatsApp ID"""
++        conn = self._acquire()
+         try:
+-            response = self.client.table("users").select("*").eq("id", user_id).execute()
+-            if response.data and len(response.data) > 0:
+-                return User(**response.data[0])
+-            return None
++            with conn.cursor() as cur:
++                cur.execute("SELECT * FROM chatbot_users WHERE id = %s", (user_id,))
++                row = cur.fetchone()
++                if row:
++                    return User(**dict(row))
++                return None
+         except Exception as e:
+             print(f"Error getting user: {e}")
+             return None
+-    
++        finally:
++            self._release(conn)
++
+     async def create_user(self, user_data: UserCreate) -> Optional[User]:
+-        """Create a new user (id is the phone number)"""
++        conn = self._acquire()
+         try:
+-            response = self.client.table("users").insert({
+-                "id": user_data.id,
+-                "name": user_data.name
+-            }).execute()
+-            if response.data and len(response.data) > 0:
+-                return User(**response.data[0])
+-            return None
++            with conn.cursor() as cur:
++                cur.execute(
++                    "INSERT INTO chatbot_users (id, name) VALUES (%s, %s) "
++                    "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name "
++                    "RETURNING *",
++                    (user_data.id, user_data.name)
++                )
++                row = cur.fetchone()
++                conn.commit()
++                if row:
++                    return User(**dict(row))
++                return None
+         except Exception as e:
++            conn.rollback()
+             print(f"Error creating user: {e}")
+             return None
+-    
+-    # Message/History operations
++        finally:
++            self._release(conn)
++
++    # ------------------------------------------------------------------ #
++    # History  →  chatbot_history
++    # ------------------------------------------------------------------ #
++
+     async def get_history(self, user_id: str, minutes: int = 5) -> List[Message]:
+-        """
+-        Get message history for user from last N minutes
+-        Returns messages sorted by created_at ascending (oldest first)
+-        """
++        conn = self._acquire()
+         try:
+-            cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
+-            
+-            response = self.client.table("history")\
+-                .select("*")\
+-                .eq("user_id", user_id)\
+-                .gte("created_at", cutoff_time.isoformat())\
+-                .order("created_at", desc=False)\
+-                .execute()
+-            
+-            if response.data:
+-                return [Message(**msg) for msg in response.data]
+-            return []
++            cutoff = datetime.utcnow() - timedelta(minutes=minutes)
++            with conn.cursor() as cur:
++                cur.execute(
++                    "SELECT * FROM chatbot_history "
++                    "WHERE user_id = %s AND created_at >= %s "
++                    "ORDER BY created_at ASC",
++                    (user_id, cutoff)
++                )
++                rows = cur.fetchall()
++                return [Message(**dict(r)) for r in rows]
+         except Exception as e:
+             print(f"Error getting history: {e}")
+             return []
+-    
++        finally:
++            self._release(conn)
++
+     async def add_history(self, message_data: MessageCreate) -> Optional[Message]:
+-        """Add a message to history"""
++        conn = self._acquire()
+         try:
+-            response = self.client.table("history").insert({
+-                "user_id": message_data.user_id,
+-                "content": message_data.content,
+-                "role": message_data.role,
+-                "url_imagen": message_data.url_imagen
+-            }).execute()
+-            
+-            if response.data and len(response.data) > 0:
+-                return Message(**response.data[0])
+-            return None
++            with conn.cursor() as cur:
++                cur.execute(
++                    "INSERT INTO chatbot_history (user_id, content, role, url_imagen) "
++                    "VALUES (%s, %s, %s, %s) RETURNING *",
++                    (
++                        message_data.user_id,
++                        message_data.content,
++                        message_data.role,
++                        message_data.url_imagen,
++                    )
++                )
++                row = cur.fetchone()
++                conn.commit()
++                if row:
++                    return Message(**dict(row))
++                return None
+         except Exception as e:
++            conn.rollback()
+             print(f"Error adding message to history: {e}")
+             return None
+-    
+-    # Department operations
++        finally:
++            self._release(conn)
++
++    # ------------------------------------------------------------------ #
++    # Departamentos  →  propiedades (tabla del sistema existente)
++    # ------------------------------------------------------------------ #
++
+     async def get_departments(self, search_query: str) -> List[Department]:
+-        """
+-        Search departments by address (case-insensitive, partial match)
+-        search_query should be wrapped with * for wildcards: *address*
+-        """
++        """Busca propiedades por calle y/o número. search_query puede incluir wildcards (*)."""
++        conn = self._acquire()
+         try:
+-            # Remove asterisks and use ilike for pattern matching
+             pattern = search_query.replace("*", "%")
+-            
+-            response = self.client.table("departamentos")\
+-                .select("*")\
+-                .ilike("address", pattern)\
+-                .limit(50)\
+-                .execute()
+-            
+-            if response.data:
+-                return [Department(**dept) for dept in response.data]
+-            return []
++            with conn.cursor() as cur:
++                cur.execute(
++                    """
++                    SELECT
++                        id::text,
++                        TRIM(CONCAT_WS(' ',
++                            calle,
++                            numero,
++                            CASE WHEN piso IS NOT NULL AND piso <> '' THEN 'Piso ' || piso END,
++                            CASE WHEN departamento IS NOT NULL AND departamento <> '' THEN 'Dpto ' || departamento END,
++                            barrio,
++                            localidad
++                        )) AS address,
++                        created_at
++                    FROM propiedades
++                    WHERE (deleted IS NULL OR deleted = FALSE)
++                      AND (
++                            calle ILIKE %s
++                         OR CONCAT(calle, ' ', numero) ILIKE %s
++                         OR CONCAT(calle, ' ', numero, ' ', COALESCE(piso,''), ' ', COALESCE(departamento,'')) ILIKE %s
++                      )
++                    LIMIT 50
++                    """,
++                    (pattern, pattern, pattern)
++                )
++                rows = cur.fetchall()
++                return [Department(**dict(r)) for r in rows]
+         except Exception as e:
+             print(f"Error searching departments: {e}")
+             return []
+-    
++        finally:
++            self._release(conn)
++
+     async def create_department(self, address: str) -> Optional[Department]:
+-        """Create a new department"""
+-        try:
+-            response = self.client.table("departamentos").insert({
+-                "address": address
+-            }).execute()
+-            
+-            if response.data and len(response.data) > 0:
+-                return Department(**response.data[0])
+-            return None
+-        except Exception as e:
+-            print(f"Error creating department: {e}")
+-            return None
+-    
++        """Las propiedades se gestionan en el sistema principal, no desde el bot."""
++        print(f"create_department: la propiedad '{address}' no existe en el sistema. No se puede crear desde el bot.")
++        return None
++
+     async def save_message(
+         self,
+-        departamento_id: int,
++        departamento_id: str,
+         content: str,
+         url_imagen: Optional[str] = None
+     ) -> bool:
+-        """Save a message/note about a department"""
++        """Guarda el mensaje en propiedad_actualizaciones usando el UUID del departamento."""
++        conn = self._acquire()
+         try:
+-            response = self.client.table("mensajes").insert({
+-                "departamento_id": departamento_id,
+-                "content": content,
+-                "url_imagen": url_imagen
+-            }).execute()
+-            
+-            return response.data is not None and len(response.data) > 0
++            new_id = str(uuid.uuid4())
++            with conn.cursor() as cur:
++                cur.execute(
++                    "INSERT INTO propiedad_actualizaciones "
++                    "(id, propiedad_id, content, url_imagen) "
++                    "VALUES (%s, %s::uuid, %s, %s)",
++                    (new_id, departamento_id, content, url_imagen)
++                )
++                conn.commit()
++                return True
+         except Exception as e:
+-            print(f"Error saving message: {e}")
++            conn.rollback()
++            print(f"Error saving message to propiedad_actualizaciones: {e}")
+             return False
+-    
+-    # Storage operations for images
++        finally:
++            self._release(conn)
++
++    # ------------------------------------------------------------------ #
++    # Storage (sin Supabase)
++    # ------------------------------------------------------------------ #
++
+     async def upload_image(self, bucket: str, file_path: str, file_data: bytes) -> Optional[str]:
+-        """
+-        Upload image to Supabase storage
+-        Returns public URL if successful
+-        """
+-        try:
+-            response = self.client.storage.from_(bucket).upload(
+-                file_path,
+-                file_data,
+-                {"content-type": "image/jpeg"}
+-            )
+-            
+-            if response:
+-                # Get public URL
+-                public_url = self.client.storage.from_(bucket).get_public_url(file_path)
+-                return public_url
+-            return None
+-        except Exception as e:
+-            print(f"Error uploading image: {e}")
+-            return None
++        print("upload_image: almacenamiento de imágenes no configurado")
++        return None
+ 
+ 
+ # Global instance
+diff --git a/tools/supabase_tools.py b/tools/supabase_tools.py
+index a264a6c..9e14b94 100644
+--- a/tools/supabase_tools.py
++++ b/tools/supabase_tools.py
+@@ -11,13 +11,18 @@ import asyncio
+ # Function declarations for Gemini
+ buscar_departamento_declaration = FunctionDeclaration(
+     name="buscar_departamento",
+-    description="Úsala para buscar departamentos en la base de datos por dirección. Busca coincidencias parciales.",
++    description=(
++        "Busca una propiedad/departamento en el sistema por dirección (calle y número). "
++        "Úsala siempre antes de guardar un mensaje. "
++        "Si no se encuentra, informa al usuario que la propiedad no está registrada en el sistema "
++        "y que debe cargarla primero desde la aplicación principal."
++    ),
+     parameters={
+         "type": "object",
+         "properties": {
+             "direccion": {
+                 "type": "string",
+-                "description": "Dirección total o parcial del departamento a buscar. Ej: 'San Benito de Palermo 1584' o 'San Benito'"
++                "description": "Calle y número del departamento. Ej: 'Formosa 380' o 'San Benito de Palermo 1584'"
+             }
+         },
+         "required": ["direccion"]
+@@ -26,14 +31,14 @@ buscar_departamento_declaration = FunctionDeclaration(
+ 
+ crear_departamento_declaration = FunctionDeclaration(
+     name="crear_departamento",
+-    description="Úsala para crear/registrar un nuevo departamento en la base de datos cuando el usuario confirme la creación.",
++    description=(
++        "NO usar — las propiedades se gestionan en el sistema principal, no desde el bot. "
++        "Si la propiedad no existe, informar al usuario."
++    ),
+     parameters={
+         "type": "object",
+         "properties": {
+-            "direccion": {
+-                "type": "string",
+-                "description": "Dirección completa del departamento a crear"
+-            }
++            "direccion": {"type": "string", "description": "Dirección"}
+         },
+         "required": ["direccion"]
+     }
+@@ -46,8 +51,8 @@ guardar_mensaje_declaration = FunctionDeclaration(
+         "type": "object",
+         "properties": {
+             "departamento_id": {
+-                "type": "integer",
+-                "description": "ID del departamento (obtenido de buscar_departamento o crear_departamento)"
++                "type": "string",
++                "description": "ID (UUID) del departamento (obtenido de buscar_departamento o crear_departamento)"
+             },
+             "contenido": {
+                 "type": "string",
+@@ -159,14 +164,13 @@ def crear_departamento(direccion: str) -> Dict[str, Any]:
+ 
+ 
+ def guardar_mensaje(
+-    departamento_id: int,
++    departamento_id: str,
+     contenido: str,
+     url_imagen: str = None
+ ) -> Dict[str, Any]:
+     """Save a message/note about a department"""
+     try:
+-        # Convertir a int por si Gemini envía float
+-        departamento_id = int(float(departamento_id))
++        departamento_id = str(departamento_id).strip()
+         
+         loop = asyncio.get_event_loop()
+         if loop.is_running():
+diff --git a/utils/image_processor.py b/utils/image_processor.py
+index 79257ee..74719f6 100644
+--- a/utils/image_processor.py
++++ b/utils/image_processor.py
+@@ -1,12 +1,10 @@
+ """
+ Image processor
+-Download images from WhatsApp and upload to Supabase storage
++Descarga imágenes de WhatsApp para enviar a Gemini.
++El almacenamiento en la nube es opcional y no bloquea el flujo.
+ """
+ from services.whatsapp import whatsapp_service
+-from services.supabase_client import supabase_service
+ from typing import Optional
+-import hashlib
+-from datetime import datetime
+ 
+ 
+ async def process_whatsapp_image(
+@@ -15,45 +13,16 @@ async def process_whatsapp_image(
+     bucket_name: str = "fotos_departamentos"
+ ) -> Optional[str]:
+     """
+-    Download image from WhatsApp and upload to Supabase storage
+-    
+-    Args:
+-        media_id: WhatsApp media ID
+-        user_id: User ID for file naming
+-        bucket_name: Supabase storage bucket name
+-        
+-    Returns:
+-        Public URL of uploaded image or None if failed
++    Descarga la imagen de WhatsApp.
++    Devuelve None (sin storage externo configurado actualmente).
++    Los bytes de la imagen se usan directamente en Gemini via handle_message.
+     """
+     try:
+-        # Download image from WhatsApp
+-        print(f"📥 Downloading image {media_id}...")
++        print(f"📥 Downloading image {media_id} for Gemini processing...")
+         image_data = await whatsapp_service.download_media(media_id)
+-        
+         if not image_data:
+             print("❌ Failed to download image")
+-            return None
+-        
+-        # Generate unique filename
+-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+-        file_hash = hashlib.md5(image_data).hexdigest()[:8]
+-        filename = f"{user_id}/{timestamp}_{file_hash}.jpg"
+-        
+-        # Upload to Supabase storage
+-        print(f"📤 Uploading image to Supabase: {filename}")
+-        public_url = await supabase_service.upload_image(
+-            bucket=bucket_name,
+-            file_path=filename,
+-            file_data=image_data
+-        )
+-        
+-        if public_url:
+-            print(f"✅ Image uploaded successfully: {public_url}")
+-            return public_url
+-        else:
+-            print("❌ Failed to upload image to Supabase")
+-            return None
+-            
++        return None
+     except Exception as e:
+         print(f"❌ Error processing image: {e}")
+         return None
