@@ -10,7 +10,6 @@ from agents import property_agent, calendar_agent
 from utils import create_user_message_with_history, process_whatsapp_image
 from config.settings import settings
 import logging
-import time
 from typing import Dict
 
 router = APIRouter()
@@ -20,23 +19,6 @@ logger = logging.getLogger(__name__)
 # confirmación ("si, guardar"), el siguiente mensaje también vaya a CalendarAgent.
 calendar_sticky_turns: Dict[str, int] = {}
 
-# Deduplicación de mensajes: evita procesar el mismo message_id dos veces
-# (WhatsApp reintenta el webhook si tarda mucho en responder)
-_processed_messages: Dict[str, float] = {}
-_DEDUP_TTL = 600  # 10 minutos
-
-
-def _is_duplicate(message_id: str) -> bool:
-    """Devuelve True si el mensaje ya fue procesado. Registra el ID si es nuevo."""
-    now = time.time()
-    # Limpiar entradas viejas
-    for mid in list(_processed_messages.keys()):
-        if now - _processed_messages[mid] > _DEDUP_TTL:
-            del _processed_messages[mid]
-    if message_id in _processed_messages:
-        return True
-    _processed_messages[message_id] = now
-    return False
 
 
 @router.get("/webhook", response_class=PlainTextResponse)
@@ -135,7 +117,7 @@ def extract_whatsapp_message(
 async def process_message(wa_message: WhatsAppMessage):
     """Process incoming WhatsApp message"""
     try:
-        if _is_duplicate(wa_message.message_id):
+        if await supabase_service.is_message_processed(wa_message.message_id):
             logger.info(f"⏭️ Duplicate message {wa_message.message_id} ignored")
             return
 
@@ -174,7 +156,8 @@ async def process_message(wa_message: WhatsAppMessage):
                 user_id=wa_message.wa_id,
                 content=wa_message.text or "[Imagen sin caption]",
                 role="user",
-                url_imagen=image_url
+                url_imagen=image_url,
+                wa_message_id=wa_message.message_id
             )
         )
         

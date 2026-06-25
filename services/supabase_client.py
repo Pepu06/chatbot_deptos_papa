@@ -97,18 +97,35 @@ class SupabaseService:
         finally:
             self._release(conn)
 
+    async def is_message_processed(self, wa_message_id: str) -> bool:
+        """Check if a WhatsApp message_id was already processed (deduplication)."""
+        conn = self._acquire()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM chatbot_history WHERE wa_message_id = %s LIMIT 1",
+                    (wa_message_id,)
+                )
+                return cur.fetchone() is not None
+        except Exception as e:
+            print(f"Error checking duplicate message: {e}")
+            return False
+        finally:
+            self._release(conn)
+
     async def add_history(self, message_data: MessageCreate) -> Optional[Message]:
         conn = self._acquire()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO chatbot_history (user_id, content, role, url_imagen) "
-                    "VALUES (%s, %s, %s, %s) RETURNING *",
+                    "INSERT INTO chatbot_history (user_id, content, role, url_imagen, wa_message_id) "
+                    "VALUES (%s, %s, %s, %s, %s) RETURNING *",
                     (
                         message_data.user_id,
                         message_data.content,
                         message_data.role,
                         message_data.url_imagen,
+                        message_data.wa_message_id,
                     )
                 )
                 row = cur.fetchone()

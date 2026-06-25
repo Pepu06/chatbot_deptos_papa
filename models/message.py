@@ -16,7 +16,7 @@ class MessageBase(BaseModel):
 
 class MessageCreate(MessageBase):
     """Model for creating a new message"""
-    pass
+    wa_message_id: Optional[str] = Field(None, description="WhatsApp message ID for deduplication")
 
 
 class Message(MessageBase):
