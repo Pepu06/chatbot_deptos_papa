@@ -20,6 +20,6 @@ class Department(DepartmentBase):
     """Department model with ID and timestamps"""
     id: str = Field(..., description="Department UUID")
     created_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True

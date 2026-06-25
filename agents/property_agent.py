@@ -7,7 +7,6 @@ from tools.supabase_tools import supabase_tool, supabase_tool_functions
 from typing import Optional, List, Dict
 
 
-# System prompt from n8n workflow
 PROPERTY_AGENT_PROMPT = """# SYSTEM PROMPT: AGENTE DE GESTIÓN INMOBILIARIA (WHATSAPP)
 
 **Rol:** Asistente logístico para registrar notas sobre departamentos. Procesás mensajes en lenguaje natural, identificás la propiedad y guardás la información.
@@ -72,30 +71,19 @@ Respondé exactamente con este formato:
 
 class PropertyAgent(BaseAgent):
     """Agent for property/department management"""
-    
+
     def __init__(self):
         super().__init__(
             name="PropertyAgent",
             system_prompt=PROPERTY_AGENT_PROMPT
         )
-    
+
     async def handle_message(
         self,
         user_message: str,
         history: Optional[List[Dict[str, str]]] = None,
         image_data: Optional[bytes] = None
     ) -> str:
-        """
-        Handle a property-related message
-        
-        Args:
-            user_message: The formatted message with history
-            history: Chat history (optional, usually included in user_message)
-            image_data: Image bytes if message includes image
-            
-        Returns:
-            Agent's response
-        """
         return await self.process(
             user_message=user_message,
             tools=[supabase_tool],

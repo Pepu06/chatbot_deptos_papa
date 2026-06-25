@@ -52,7 +52,7 @@ guardar_mensaje_declaration = FunctionDeclaration(
         "properties": {
             "departamento_id": {
                 "type": "string",
-                "description": "ID (UUID) del departamento (obtenido de buscar_departamento o crear_departamento)"
+                "description": "ID (UUID) del departamento (obtenido de buscar_departamento)"
             },
             "contenido": {
                 "type": "string",
@@ -81,13 +81,10 @@ supabase_tool = Tool(
 def buscar_departamento(direccion: str) -> Dict[str, Any]:
     """Search for departments by address"""
     try:
-        # Wrap with wildcards for partial matching
         search_pattern = f"*{direccion}*"
-        
-        # Use asyncio to run async function
+
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            # If event loop is already running, use run_in_executor
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(
@@ -99,14 +96,14 @@ def buscar_departamento(direccion: str) -> Dict[str, Any]:
             departments = loop.run_until_complete(
                 supabase_service.get_departments(search_pattern)
             )
-        
+
         if not departments:
             return {
                 "encontrado": False,
                 "mensaje": f"No se encontró ningún departamento con la dirección '{direccion}'",
                 "departamentos": []
             }
-        
+
         return {
             "encontrado": True,
             "cantidad": len(departments),
@@ -126,41 +123,11 @@ def buscar_departamento(direccion: str) -> Dict[str, Any]:
 
 
 def crear_departamento(direccion: str) -> Dict[str, Any]:
-    """Create a new department"""
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    supabase_service.create_department(direccion)
-                )
-                department = future.result()
-        else:
-            department = loop.run_until_complete(
-                supabase_service.create_department(direccion)
-            )
-        
-        if department:
-            return {
-                "creado": True,
-                "departamento": {
-                    "id": department.id,
-                    "address": department.address
-                },
-                "mensaje": f"Departamento '{direccion}' creado exitosamente"
-            }
-        else:
-            return {
-                "creado": False,
-                "error": "No se pudo crear el departamento"
-            }
-    except Exception as e:
-        return {
-            "creado": False,
-            "error": str(e)
-        }
+    """No-op: properties managed in main system"""
+    return {
+        "creado": False,
+        "error": "Las propiedades se gestionan en el sistema principal, no desde el bot."
+    }
 
 
 def guardar_mensaje(
@@ -171,7 +138,7 @@ def guardar_mensaje(
     """Save a message/note about a department"""
     try:
         departamento_id = str(departamento_id).strip()
-        
+
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
@@ -185,7 +152,7 @@ def guardar_mensaje(
             success = loop.run_until_complete(
                 supabase_service.save_message(departamento_id, contenido, url_imagen)
             )
-        
+
         if success:
             return {
                 "guardado": True,
